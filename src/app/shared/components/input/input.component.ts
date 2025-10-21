@@ -24,6 +24,7 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
           [value]="value"
           [disabled]="disabled"
           [readonly]="readonly"
+          [maxlength]="maxlength"
           [class]="inputClasses"
           (input)="onInput($event)"
           (blur)="onBlur()"
@@ -53,6 +54,7 @@ export class InputComponent implements ControlValueAccessor {
   @Input() required = false;
   @Input() errorMessage = '';
   @Input() size: 'sm' | 'md' | 'lg' = 'md';
+  @Input() maxlength?: number;
 
   @Output() focus = new EventEmitter<FocusEvent>();
   @Output() blur = new EventEmitter<FocusEvent>();
