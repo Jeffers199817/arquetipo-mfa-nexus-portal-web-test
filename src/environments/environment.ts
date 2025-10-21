@@ -5,7 +5,7 @@
 export const environment = {
   production: false,
   apiUrl: 'http://localhost:9090/spf-msa-apex-core-service',
-  appName: 'Banking Portal',
+  appName: 'arquetipo-mfa-nexus-portal-web',
   version: '1.0.0',
   enableLogging: true,
   enableMockData: false,

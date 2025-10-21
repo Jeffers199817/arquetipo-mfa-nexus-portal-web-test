@@ -12,22 +12,5 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-    # If you have a backend container, align the hostname with nginx upstream
-    # depends_on:
-    #   - banking-backend
-    # networks:
-    #   - app
-
-  # Example backend service (adjust image/name/port as needed)
-  # banking-backend:
-  #   image: your-backend-image:latest
-  #   ports:
-  #     - "8080:8080"
-  #   networks:
-  #     - app
-
-# networks:
-#   app:
-#     driver: bridge
 
 
