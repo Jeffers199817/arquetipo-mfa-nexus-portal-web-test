@@ -13,6 +13,7 @@ import {
   UpdateClientRequest 
 } from '@core/models/client.model';
 import { Gender, GenderLabels } from '@core/models/person.model';
+import * as CryptoJS from 'crypto-js';
 
 /**
  * Componente de página de clientes
@@ -641,11 +642,8 @@ export class ClientsPageComponent implements OnInit, OnDestroy {
    * Hash SHA-256 a hex (para validar contraseña actual localmente)
    */
   private async hashSha256Hex(value: string): Promise<string> {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(value);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    // Usar CryptoJS que funciona sin HTTPS
+    return CryptoJS.SHA256(value).toString(CryptoJS.enc.Hex);
   }
 
   /**

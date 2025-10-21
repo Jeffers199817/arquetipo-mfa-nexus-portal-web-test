@@ -8,6 +8,7 @@ import {
   UpdateClientRequest, 
   ClientResponse 
 } from '../models/client.model';
+import * as CryptoJS from 'crypto-js';
 
 /**
  * Servicio para gestión de clientes
@@ -164,12 +165,8 @@ export class ClientService {
    * Hashes a string using SHA-256 and returns hex representation
    */
   private async hashSha256Hex(value: string): Promise<string> {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(value);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    return hashHex;
+    // Usar CryptoJS que funciona sin HTTPS
+    return CryptoJS.SHA256(value).toString(CryptoJS.enc.Hex);
   }
 }
 
