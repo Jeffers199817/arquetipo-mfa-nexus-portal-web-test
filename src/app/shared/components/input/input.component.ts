@@ -24,7 +24,7 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
           [value]="value"
           [disabled]="disabled"
           [readonly]="readonly"
-          [maxlength]="maxlength"
+          [attr.maxlength]="maxlength"
           [class]="inputClasses"
           (input)="onInput($event)"
           (blur)="onBlur()"
