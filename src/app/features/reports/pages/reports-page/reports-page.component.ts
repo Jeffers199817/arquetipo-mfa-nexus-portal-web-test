@@ -11,6 +11,17 @@ import { ClientService } from '@core/services/client.service';
 import { NotificationService } from '@core/services/notification.service';
 import { ClientResponse } from '@core/models/client.model';
 
+// Interface para agrupar datos por cuenta
+interface AccountGroup {
+  accountNumber: string;
+  accountType: string;
+  initialBalance: number;
+  movements: Report[];
+  totalDeposits: number;
+  totalWithdrawals: number;
+  finalBalance: number;
+}
+
 /**
  * Componente de página de reportes
  * Implementa la funcionalidad de generación y descarga de reportes de movimientos
@@ -85,12 +96,16 @@ import { ClientResponse } from '@core/models/client.model';
         </form>
       </div>
 
-      <!-- Resumen del reporte -->
+      <!-- Resumen General de Todas las Cuentas -->
       <div *ngIf="reportData.length > 0" class="report-summary">
+        <div class="summary-header">
+          <h2>📊 Resumen General de Todas las Cuentas</h2>
+          <p class="summary-subtitle">Total consolidado de {{ groupedAccounts.length }} cuenta(s)</p>
+        </div>
         <div class="summary-cards">
           <div class="summary-card">
-            <h3>Saldo Inicial</h3>
-            <p class="summary-value">{{ reportData[0]?.initialBalance | currency:'USD':'symbol':'1.2-2' }}</p>
+            <h3>Saldo Inicial Total</h3>
+            <p class="summary-value">{{ getTotalInitialBalance() | currency:'USD':'symbol':'1.2-2' }}</p>
           </div>
           <div class="summary-card">
             <h3>Total Depósitos</h3>
@@ -101,21 +116,56 @@ import { ClientResponse } from '@core/models/client.model';
             <p class="summary-value negative">{{ getTotalWithdrawals() | currency:'USD':'symbol':'1.2-2' }}</p>
           </div>
           <div class="summary-card">
-            <h3>Saldo Final</h3>
-            <p class="summary-value">{{ reportData[reportData.length - 1]?.availableBalance | currency:'USD':'symbol':'1.2-2' }}</p>
+            <h3>Saldo Final Total</h3>
+            <p class="summary-value final">{{ getTotalFinalBalance() | currency:'USD':'symbol':'1.2-2' }}</p>
           </div>
         </div>
       </div>
 
-      <!-- Tabla de reporte -->
-      <div *ngIf="reportData.length > 0" class="report-table">
-        <app-table
-          [data]="reportData"
-          [columns]="tableColumns"
-          [showPagination]="true"
-          [pageSize]="pageSize"
-          title="Movimientos del Reporte">
-        </app-table>
+      <!-- Tablas de reporte agrupadas por cuenta -->
+      <div *ngIf="groupedAccounts.length > 0" class="accounts-report">
+        <div *ngFor="let account of groupedAccounts; let i = index" class="account-section">
+          <!-- Cabecera de la cuenta -->
+          <div class="account-header">
+            <h3>
+              <span class="account-icon">💳</span>
+              {{ translateAccountType(account.accountType) }} - {{ account.accountNumber }}
+            </h3>
+          </div>
+
+          <!-- Totales de la cuenta -->
+          <div class="account-summary">
+            <div class="account-summary-grid">
+              <div class="account-summary-card">
+                <div class="summary-label">Saldo Inicial</div>
+                <div class="summary-amount">{{ account.initialBalance | currency:'USD':'symbol':'1.2-2' }}</div>
+              </div>
+              <div class="account-summary-card positive-card">
+                <div class="summary-label">Total Depósitos</div>
+                <div class="summary-amount positive">{{ account.totalDeposits | currency:'USD':'symbol':'1.2-2' }}</div>
+              </div>
+              <div class="account-summary-card negative-card">
+                <div class="summary-label">Total Retiros</div>
+                <div class="summary-amount negative">{{ account.totalWithdrawals | currency:'USD':'symbol':'1.2-2' }}</div>
+              </div>
+              <div class="account-summary-card final-card">
+                <div class="summary-label">Saldo Final</div>
+                <div class="summary-amount final">{{ account.finalBalance | currency:'USD':'symbol':'1.2-2' }}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tabla de movimientos de esta cuenta -->
+          <div class="account-table movement-table">
+            <app-table
+              [data]="account.movements"
+              [columns]="tableColumns"
+              [showPagination]="true"
+              [pageSize]="pageSize"
+              [title]="'Movimientos de la Cuenta'">
+            </app-table>
+          </div>
+        </div>
       </div>
 
       <!-- Mensaje cuando no hay datos -->
@@ -139,6 +189,7 @@ import { ClientResponse } from '@core/models/client.model';
 })
 export class ReportsPageComponent implements OnInit, OnDestroy {
   reportData: Report[] = [];
+  groupedAccounts: AccountGroup[] = [];
   clients: ClientResponse[] = [];
   clientOptions: SelectOption[] = [];
   loading = false;
@@ -152,6 +203,7 @@ export class ReportsPageComponent implements OnInit, OnDestroy {
     { key: 'type', label: 'Tipo', sortable: true },
     { key: 'initialBalance', label: 'Saldo Inicial', sortable: true, type: 'currency' },
     { key: 'status', label: 'Estado', sortable: true, type: 'boolean' },
+    { key: 'movementType', label: 'Tipo de Movimiento', sortable: true },
     { key: 'movement', label: 'Movimiento', sortable: true, type: 'currency' },
     { key: 'availableBalance', label: 'Saldo Disponible', sortable: true, type: 'currency' }
   ];
@@ -247,15 +299,82 @@ export class ReportsPageComponent implements OnInit, OnDestroy {
         .subscribe({
           next: (data: Report[]) => {
             this.reportData = [...data];
+            if (data.length > 0) {
+              this.groupAccountData();
+              this.notificationService.showSuccess('Éxito', `Reporte generado: ${data.length} movimientos en ${this.groupedAccounts.length} cuenta(s)`);
+            } else {
+              this.groupedAccounts = [];
+              this.notificationService.showWarning('Sin datos', 'No se encontraron movimientos para el rango de fechas seleccionado');
+            }
             this.loading = false;
-            this.notificationService.showSuccess('Éxito', `Reporte generado: ${data.length} movimientos`);
           },
           error: (error: Error) => {
             console.error('Error generando reporte:', error);
-            this.notificationService.showError('Error', 'No se pudo generar el reporte: ' + error.message);
+            this.notificationService.showError('Error', 'No se pudo generar el reporte');
+            this.reportData = [];
+            this.groupedAccounts = [];
             this.loading = false;
           }
         });
+    }
+  }
+
+  /**
+   * Agrupa los datos del reporte por número de cuenta
+   */
+  private groupAccountData(): void {
+    const accountMap = new Map<string, AccountGroup>();
+
+    this.reportData.forEach(report => {
+      const accountNumber = report.accountNumber;
+      
+      if (!accountMap.has(accountNumber)) {
+        // Primera vez que vemos esta cuenta
+        accountMap.set(accountNumber, {
+          accountNumber: accountNumber,
+          accountType: report.type,
+          initialBalance: report.initialBalance,
+          movements: [],
+          totalDeposits: 0,
+          totalWithdrawals: 0,
+          finalBalance: report.initialBalance
+        });
+      }
+
+      const account = accountMap.get(accountNumber)!;
+      
+      // Agregar el tipo de movimiento al reporte
+      const reportWithType = {
+        ...report,
+        movementType: this.getMovementType(report.movement)
+      };
+      
+      account.movements.push(reportWithType);
+
+      // Calcular totales
+      if (report.movement > 0) {
+        account.totalDeposits += report.movement;
+      } else if (report.movement < 0) {
+        account.totalWithdrawals += Math.abs(report.movement);
+      }
+
+      // El saldo final es el saldo disponible del último movimiento
+      account.finalBalance = report.availableBalance;
+    });
+
+    this.groupedAccounts = Array.from(accountMap.values());
+  }
+
+  /**
+   * Determina el tipo de movimiento basándose en el valor
+   */
+  private getMovementType(movement: number): string {
+    if (movement > 0) {
+      return 'Depósito';
+    } else if (movement < 0) {
+      return 'Retiro';
+    } else {
+      return 'Sin movimiento';
     }
   }
 
@@ -297,7 +416,7 @@ export class ReportsPageComponent implements OnInit, OnDestroy {
         },
         error: (error: Error) => {
           console.error('Error descargando PDF:', error);
-          this.notificationService.showError('Error', 'No se pudo descargar el PDF: ' + error.message);
+          this.notificationService.showError('Error', 'No se pudo descargar el PDF');
           this.loading = false;
         }
       });
@@ -320,21 +439,31 @@ export class ReportsPageComponent implements OnInit, OnDestroy {
 
 
   /**
-   * Calcula el total de depósitos
+   * Calcula el saldo inicial total de todas las cuentas
    */
-  getTotalDeposits(): number {
-    return this.reportData
-      .filter(item => item.movement > 0)
-      .reduce((total, item) => total + item.movement, 0);
+  getTotalInitialBalance(): number {
+    return this.groupedAccounts.reduce((total, account) => total + account.initialBalance, 0);
   }
 
   /**
-   * Calcula el total de retiros
+   * Calcula el total de depósitos de todas las cuentas
+   */
+  getTotalDeposits(): number {
+    return this.groupedAccounts.reduce((total, account) => total + account.totalDeposits, 0);
+  }
+
+  /**
+   * Calcula el total de retiros de todas las cuentas
    */
   getTotalWithdrawals(): number {
-    return Math.abs(this.reportData
-      .filter(item => item.movement < 0)
-      .reduce((total, item) => total + item.movement, 0));
+    return this.groupedAccounts.reduce((total, account) => total + account.totalWithdrawals, 0);
+  }
+
+  /**
+   * Calcula el saldo final total de todas las cuentas
+   */
+  getTotalFinalBalance(): number {
+    return this.groupedAccounts.reduce((total, account) => total + account.finalBalance, 0);
   }
 
   /**
@@ -342,6 +471,24 @@ export class ReportsPageComponent implements OnInit, OnDestroy {
    */
   getNetBalance(): number {
     return this.getTotalDeposits() - this.getTotalWithdrawals();
+  }
+
+  /**
+   * Traduce el tipo de cuenta del inglés al español
+   */
+  translateAccountType(type: string): string {
+    const translations: { [key: string]: string } = {
+      'CHECKING': 'CUENTA CORRIENTE',
+      'SAVINGS': 'CUENTA AHORROS',
+      'Checking': 'Cuenta Corriente',
+      'Savings': 'Cuenta Ahorros',
+      'checking': 'Cuenta Corriente',
+      'savings': 'Cuenta Ahorros',
+      'Corriente': 'Cuenta Corriente',
+      'Ahorros': 'Cuenta Ahorros'
+    };
+    
+    return translations[type] || type;
   }
 
   /**

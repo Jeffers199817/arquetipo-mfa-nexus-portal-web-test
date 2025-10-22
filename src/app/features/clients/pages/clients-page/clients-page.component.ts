@@ -320,7 +320,7 @@ export class ClientsPageComponent implements OnInit, OnDestroy {
         },
         error: (error: Error) => {
           console.error('Error cargando clientes:', error);
-          this.notificationService.showError('Error', 'No se pudieron cargar los clientes: ' + error.message);
+          this.notificationService.showError('Error', 'No se pudieron cargar los clientes');
           this.loading = false;
         }
       });
@@ -474,9 +474,9 @@ export class ClientsPageComponent implements OnInit, OnDestroy {
               console.error('Error al actualizar cliente:', error);
               let errorMessage = 'No se pudo actualizar el cliente';
               
-              // Verificar si es un error de duplicado
-              if (error.error?.message || error.message) {
-                const msg = (error.error?.message || error.message).toLowerCase();
+              // Verificar si es un error de duplicado o de negocio
+              if (error.error?.message) {
+                const msg = error.error.message.toLowerCase();
                 if (msg.includes('nombre') && (msg.includes('ya existe') || msg.includes('duplicate') || msg.includes('already exists'))) {
                   errorMessage = `El nombre "${formData.name}" ya está registrado. Por favor use otro nombre.`;
                 } else if (msg.includes('identificación') || msg.includes('identification')) {
@@ -487,6 +487,7 @@ export class ClientsPageComponent implements OnInit, OnDestroy {
                   errorMessage = 'El cliente ya existe con esos datos. Por favor use otros valores.';
                 }
               }
+              // No mostrar detalles técnicos como 502, 503, etc.
               
               this.notificationService.showError('Error', errorMessage);
               this.loading = false;
@@ -516,9 +517,9 @@ export class ClientsPageComponent implements OnInit, OnDestroy {
               console.error('Error al crear cliente:', error);
               let errorMessage = 'No se pudo crear el cliente';
               
-              // Verificar si es un error de duplicado
-              if (error.error?.message || error.message) {
-                const msg = (error.error?.message || error.message).toLowerCase();
+              // Verificar si es un error de duplicado o de negocio
+              if (error.error?.message) {
+                const msg = error.error.message.toLowerCase();
                 if (msg.includes('nombre') && (msg.includes('ya existe') || msg.includes('duplicate') || msg.includes('already exists'))) {
                   errorMessage = `El nombre "${formData.name}" ya está registrado. Por favor use otro nombre.`;
                 } else if (msg.includes('identificación') || msg.includes('identification')) {
@@ -529,6 +530,7 @@ export class ClientsPageComponent implements OnInit, OnDestroy {
                   errorMessage = 'El cliente ya existe con esos datos. Por favor use otros valores.';
                 }
               }
+              // No mostrar detalles técnicos como 502, 503, etc.
               
               this.notificationService.showError('Error', errorMessage);
               this.loading = false;

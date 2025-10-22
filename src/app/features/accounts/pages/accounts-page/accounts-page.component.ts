@@ -257,7 +257,7 @@ export class AccountsPageComponent implements OnInit, OnDestroy {
         },
         error: (error: Error) => {
           console.error('Error cargando cuentas:', error);
-          this.notificationService.showError('Error', 'No se pudieron cargar las cuentas: ' + error.message);
+          this.notificationService.showError('Error', 'No se pudieron cargar las cuentas');
           this.loading = false;
         }
       });

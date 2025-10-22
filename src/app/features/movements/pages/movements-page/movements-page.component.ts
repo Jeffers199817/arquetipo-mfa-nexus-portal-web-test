@@ -258,7 +258,7 @@ export class MovementsPageComponent implements OnInit, OnDestroy {
         },
         error: (error: Error) => {
           console.error('Error cargando movimientos:', error);
-          this.notificationService.showError('Error', 'No se pudieron cargar los movimientos: ' + error.message);
+          this.notificationService.showError('Error', 'No se pudieron cargar los movimientos');
           this.loading = false;
         }
       });
